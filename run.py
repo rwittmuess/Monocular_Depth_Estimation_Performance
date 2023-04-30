@@ -134,45 +134,16 @@ def run(input_path, output_path, model_path, model_type="dpt_beit_large_512", op
     model, transform, net_w, net_h = load_model(device, model_path, model_type, optimize, height, square)
 
     # get input
-    if input_path is not None:
-        # image_names = glob.glob(os.path.join(input_path, "*"))
-        #
-        #
-        #
-        #
-        # Exclude it later to seperate function and pass data into it
-        #
-        # ================================================================
-        #
-        
-        #bag = rosbag.Bag(os.path.join('drone_data', input_path))
+    # if input_path is not None:
+    #     ''' Images have been placed in the input folder before.
+    #     '''
+    #     # image_names = glob.glob(os.path.join(input_path, "*"))
+    #     # data[test_run][model_type]['cam2']
 
-
-        bag = rosbag.Bag(os.path.join('drone_data', 'test3.bag'))
-        image_data_infra1_ros = b2d.getImageData(bag, '/d455/infra1/image_rect_raw')
-        image_data_infra2_ros = b2d.getImageData(bag, '/d455/infra2/image_rect_raw')
-
-        image_data_infra1_np = b2d.ros_IMG_2numpy(image_data_infra1_ros)
-
-        image_data_infra1_np = image_data_infra1_np[0:3]
-        for index, image in enumerate(image_data_infra1_np):
-            filename = os.path.join(input_path,str(index))
-            cv2.imwrite(str(filename) + ".png", image)
-        #image_data_infra2_np = b2d.ros2numpy(image_data_infra2_ros)
-
-        image_names = glob.glob(os.path.join(input_path, "*"))
-        
-        # image_names = rw_utils.get_images_from_realsense()
-
-        #
-        # ================================================================
-        #
-        #
-        #
-        #
-        num_images = len(image_names)
-    else:
-        print("No input path specified. Grabbing images from camera.")
+    #     image_names = glob.glob(os.path.join(input_path, "*"))
+    #     num_images = len(image_names)
+    # else:
+    #     print("No input path specified. Grabbing images from camera.")
 
     # create output folder
     if output_path is not None:
@@ -186,6 +157,19 @@ def run(input_path, output_path, model_path, model_type="dpt_beit_large_512", op
         for index, image_name in enumerate(image_names):
 
             print("  Processing {} ({}/{})".format(image_name, index + 1, num_images))
+
+            # check if depth estimation for this picture already exists in the output folder.
+            
+            filename = os.path.join(output_path,
+                                    os.path.splitext(os.path.basename(image_name))[0]
+                                    + '-' + model_type  + '.png')
+            # file_path = os.path.join(input_path, filename)
+            if os.path.exists(filename):
+                # print(f'The file {filename} already exists in the output folder.')
+                continue # skip the depth estimation for this input picture as it already exists    
+            # else:
+                # print(f'The file {filename} does not exists in the output folder yet .')
+
 
             # input
             original_image_rgb = utils.read_image(image_name)  # in [0, 1]
