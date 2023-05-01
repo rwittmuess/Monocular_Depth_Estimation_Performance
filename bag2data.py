@@ -63,7 +63,17 @@ def ros_DEPTH_2numpy(msg_list):
         np_list.append(np.frombuffer(pic.data, dtype=np.uint16).reshape(pic.height, pic.width))
     return np_list
 
+# v1
+# def load_images_from_folder(folder):
+#     images = []
+#     for filename in os.listdir(folder):
+#         img = cv2.imread(os.path.join(folder,filename))
+#         if img is not None:
+#             img = img[:, :, 0]     # TODO: make it dynamic
+#             images.append(img)
+#     return images
 
+ #v2
 def load_images_from_folder(folder):
     images = []
     for filename in os.listdir(folder):
@@ -72,6 +82,7 @@ def load_images_from_folder(folder):
             img = img[:, :, 0]     # TODO: make it dynamic
             images.append(img)
     return images
+
 
 
 # def dispDepthImg(msg):
