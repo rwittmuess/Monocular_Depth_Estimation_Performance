@@ -20,6 +20,7 @@ import os
 import rosbag
 # setting path
 import bag2data as b2d
+import pickle
 
 first_execution = True
 def process(device, model, model_type, image, input_size, target_size, optimize, use_camera):
@@ -43,7 +44,7 @@ def process(device, model, model_type, image, input_size, target_size, optimize,
 
     if "openvino" in model_type:
         if first_execution or not use_camera:
-            print(f"    Input resized to {input_size[0]}x{input_size[1]} before entering the encoder")
+            # print(f"    Input resized to {input_size[0]}x{input_size[1]} before entering the encoder")
             first_execution = False
 
         sample = [np.reshape(image, (1, 3, *input_size))]
@@ -63,7 +64,7 @@ def process(device, model, model_type, image, input_size, target_size, optimize,
 
         if first_execution or not use_camera:
             height, width = sample.shape[2:]
-            print(f"    Input resized to {width}x{height} before entering the encoder")
+            # print(f"    Input resized to {width}x{height} before entering the encoder")
             first_execution = False
 
         prediction = model.forward(sample)
@@ -110,7 +111,7 @@ def create_side_by_side(image, depth, grayscale):
         return np.concatenate((image, right_side), axis=1)
 
 
-def run(input_path, output_path, model_path, model_type="dpt_beit_large_512", optimize=False, side=False, height=None,
+def run(data_filename, test_run, cam, output_path, model_path, model_type="dpt_beit_large_512", optimize=False, side=False, height=None,
         square=False, grayscale=False):
     """Run MonoDepthNN to compute depth maps.
 
@@ -145,53 +146,87 @@ def run(input_path, output_path, model_path, model_type="dpt_beit_large_512", op
     # else:
     #     print("No input path specified. Grabbing images from camera.")
 
+
+
+    # get input
+    if cam is not None:
+        ''' Images have been placed in the input folder before.
+        '''
+        # image_names = glob.glob(os.path.join(input_path, "*"))
+        # data[test_run][model_type]['cam2']
+
+        with open(data_filename, 'rb') as file:
+            data = pickle.load(file)
+            file.close()
+            print('\'data\' loaded.')
+    # else:
+    #     print("No input path specified. Grabbing images from camera.")
+
+
     # create output folder
     if output_path is not None:
         os.makedirs(output_path, exist_ok=True)
 
     print("Start processing")
 
-    if input_path is not None:
-        if output_path is None:
-            print("Warning: No output path specified. Images will be processed but not shown or stored anywhere.")
-        for index, image_name in enumerate(image_names):
+    if cam is not None:
 
-            print("  Processing {} ({}/{})".format(image_name, index + 1, num_images))
+        category = 'depth_estimate' + cam[-1]
+        amount_frames = len(data[test_run][model_type][cam])
 
-            # check if depth estimation for this picture already exists in the output folder.
+        if category not in data[test_run][model_type] or len(data[test_run][model_type][category]) != amount_frames:
+            # print('\''+ str(category) + '\' not in \'data\'. Creating dictionary.')
+            data[test_run][model_type][category] = []
+            if output_path is None:
+                print("Warning: No output path specified. Images will be processed but not shown or stored anywhere.")
+            for picture_idx, picture in enumerate(data[test_run][model_type][cam]):
+
+                # print("  Processing {} ({}/{})".format(image_name, index + 1, num_images))
+
+                # check if depth estimation for this picture already exists in the output folder.
+                
+                # filename = os.path.join(output_path,
+                #                         os.path.splitext(os.path.basename(image_name))[0]
+                #                         + '-' + model_type  + '.png')
+                # file_path = os.path.join(input_path, filename)
+                # if os.path.exists(filename):
+                #     # print(f'The file {filename} already exists in the output folder.')
+                #     continue # skip the depth estimation for this input picture as it already exists   
+                # else:
+                    # print(f'The file {filename} does not exists in the output folder yet .')
+                
+        
+
+                # input
+                # original_image_rgb = utils.read_image(image_name)  # in [0, 1]
+                # image = transform({"image": original_image_rgb})["image"]
+
+
+                print('Processing picture number ' + str(picture_idx+1) + ' out of ' + str(amount_frames))
+
+                img = cv2.cvtColor(picture, cv2.COLOR_BGR2RGB) / 255.0
+                image = transform({"image": img})["image"]
+
+                # compute
+                with torch.no_grad():
+                    prediction = process(device, model, model_type, image, (net_w, net_h), img.shape[1::-1],
+                                        optimize, False)
+
+                # output
+                if output_path is not None:
+                    # filename = os.path.join(
+                    #     output_path, os.path.splitext(os.path.basename(image_name))[0] + '-' + model_type
+                    # )
+                    if not side:
+                        # utils.write_depth(filename, prediction, grayscale, bits=2)
+                        new_pic = utils.write_depth_dict_format(prediction, grayscale, bits=2)
+                        data[test_run][model_type][category].append(new_pic)
             
-            filename = os.path.join(output_path,
-                                    os.path.splitext(os.path.basename(image_name))[0]
-                                    + '-' + model_type  + '.png')
-            # file_path = os.path.join(input_path, filename)
-            if os.path.exists(filename):
-                # print(f'The file {filename} already exists in the output folder.')
-                continue # skip the depth estimation for this input picture as it already exists    
-            # else:
-                # print(f'The file {filename} does not exists in the output folder yet .')
-
-
-            # input
-            original_image_rgb = utils.read_image(image_name)  # in [0, 1]
-            image = transform({"image": original_image_rgb})["image"]
-
-            # compute
-            with torch.no_grad():
-                prediction = process(device, model, model_type, image, (net_w, net_h), original_image_rgb.shape[1::-1],
-                                     optimize, False)
-
-            # output
-            if output_path is not None:
-                filename = os.path.join(
-                    output_path, os.path.splitext(os.path.basename(image_name))[0] + '-' + model_type
-                )
-                if not side:
-                    utils.write_depth(filename, prediction, grayscale, bits=2)
-                else:
-                    original_image_bgr = np.flip(original_image_rgb, 2)
-                    content = create_side_by_side(original_image_bgr*255, prediction, grayscale)
-                    cv2.imwrite(filename + ".png", content)
-                # utils.write_pfm(filename + ".pfm", prediction.astype(np.float32))
+                    else:
+                        original_image_bgr = np.flip(original_image_rgb, 2)
+                        content = create_side_by_side(original_image_bgr*255, prediction, grayscale)
+                        cv2.imwrite(filename + ".png", content)
+                    # utils.write_pfm(filename + ".pfm", prediction.astype(np.float32))
 
     else:
         with torch.no_grad():
@@ -227,6 +262,12 @@ def run(input_path, output_path, model_path, model_type="dpt_beit_large_512", op
 
                     frame_index += 1
         print()
+
+
+    # save data to pickle file
+    with open("data.pickle", "wb") as file:
+        pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
+        file.close()
 
     print("Finished")
 
