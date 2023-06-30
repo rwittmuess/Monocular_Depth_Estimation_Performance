@@ -19,7 +19,6 @@ from midas.model_loader import default_models, load_model
 import os
 import rosbag
 # setting path
-import bag2data as b2d
 import pickle
 
 first_execution = True
