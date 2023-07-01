@@ -112,3 +112,4 @@ venv.bak/
 *.pt
 drone_data/test3.bag
 test3.bag
+data.pickle
