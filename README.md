@@ -31,25 +31,3 @@ e.g. if dpt_beit_large_512.pt is chosen:
 To run it from the camera:
 
     python run.py --model_type <model_type> --side
-
-
-## Analysis
-
-
-
-## Conclusion
-
-### Problems encountered
-*
-*
-*
-
-### Things that didnt work/Limitations
-*
-*
-*
-
-### Things that worked well/Advantages to other methods
-*
-*
-*
