@@ -295,3 +295,35 @@ def get_closest_index(bag_file_name,topic_cam_given, index_cam_given, topic_cam_
 
 
 
+def get_max_depth_in_frames(data, test_run, model_type, cam_key):
+    # returns a list of max. depth in every picture
+    max_depth_list = []
+    for frame in data[test_run][model_type][cam_key]:
+        max_depth_list.append(frame.max())
+    return max_depth_list
+
+
+
+def get_indices_images_not_max_depth(max_depth, max_depth_list):
+    # max_depth NEEDS to be a LIST
+    # find depth-pictures in which max. depth is not 65535 = (2**16)-1 or 255
+    indices_not_max_depth = []      # (index_ value)
+    for i in range(len(max_depth_list)):
+        if max_depth_list[i] not in max_depth:
+            indices_not_max_depth.append((i, max_depth_list[i]))
+
+    return np.array(indices_not_max_depth)
+    # # get max. depth in every depth-picture
+    # max_estimated_depth = []
+    # for frame in data[test_run][model_type][cam1rgb_key]:
+    #     max_estimated_depth.append(frame.max())
+
+    # # find depth-pictures in which max. depth is not 65535 = (2**16)-1
+    # indices_not_max_depth = []      # (index, value)
+    # for i in range(len(max_estimated_depth)):
+    #     if max_estimated_depth[i] != 255:
+    #         indices_not_max_depth.append((i, max_estimated_depth[i]))
+
+    # indices_not_max_depth = np.array(indices_not_max_depth)
+
+
