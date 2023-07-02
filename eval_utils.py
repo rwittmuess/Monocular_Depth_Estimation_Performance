@@ -265,21 +265,21 @@ def extract_depth_data(bag, img_topic = '/d455/depth/image_rect_raw'):
 
 
 
-def get_closest_index(bag_file_name,topic_cam_given, index_cam_given, topic_cam_wanted):
+def get_closest_index(index_cam_given, timestamps_cam_given, timestamps_cam_wanted):
     '''
     When given a image of a certain topic it
     returns the index of the image of another topic that is closest timewise. 
     '''
-    bag = rosbag.Bag(os.path.join('drone_data', bag_file_name))
+    # bag = rosbag.Bag(os.path.join('drone_data', bag_file_name))
 
-    timestamps_cam_given = []
-    timestamps_cam_wanted = []
+    # timestamps_cam_given = []
+    # timestamps_cam_wanted = []
     
-    for msg in bag.read_messages(topics=[topic_cam_given]):
-        timestamps_cam_given.append(msg.timestamp.to_sec())
+    # for msg in bag.read_messages(topics=[topic_cam_given]):
+    #     timestamps_cam_given.append(msg.timestamp.to_sec())
 
-    for msg in bag.read_messages(topics=[topic_cam_wanted]):
-        timestamps_cam_wanted.append(msg.timestamp.to_sec())
+    # for msg in bag.read_messages(topics=[topic_cam_wanted]):
+    #     timestamps_cam_wanted.append(msg.timestamp.to_sec())
 
     target_timestamp = timestamps_cam_given[index_cam_given]
     closest_index = None    
