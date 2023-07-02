@@ -327,3 +327,39 @@ def get_indices_images_not_max_depth(max_depth, max_depth_list):
     # indices_not_max_depth = np.array(indices_not_max_depth)
 
 
+
+def visualize_errors(frame1_idx, frame2_idx, data, cam1_key, cam2_key, test_run, model_type):
+    image_subtraction_pic = abs(data[test_run][model_type][cam1_key][frame1_idx] - data[test_run][model_type][cam2_key][frame2_idx])
+
+    fig, axes = plt.subplots(nrows=4, ncols=4, figsize =(15, 10))
+    for idx, ax in enumerate(axes.flat):
+
+        error_matrix = image_subtraction_pic
+
+        # Find the unique values in the array
+        unique_values = np.unique(error_matrix)
+
+        # Sort the unique values in descending order and get the 'largest_amount' largest ones
+        largest_amount = 1000*(idx+1)
+        largest_values = np.sort(unique_values)[::-1][:(largest_amount)]
+
+        # Create a Boolean mask that sets the largest 10 unique values to True
+        mask = np.isin(error_matrix, largest_values)
+
+        difference_pic_zero_extremes = np.zeros_like(error_matrix)
+        difference_pic_zero_extremes[mask] = 255
+
+        # fig = plt.figure(figsize =(15, 15))
+        roundingval = 2
+        text = "n = "+str(largest_amount) + " (" + str(round(largest_values[0],roundingval)) + " - " +str(round(largest_values[-1],roundingval)) + ")"
+        ax.set_title(text)   
+        
+        im = ax.imshow(difference_pic_zero_extremes, vmin=0, vmax=255)
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+    fig.colorbar(im, cax=cbar_ax)
+
+    fig.suptitle('Location of the n largest, unique errors', fontsize=16)
+    plt.show()
+    # plt.colorbar(label="error", orientation="horizontal")
