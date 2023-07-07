@@ -219,8 +219,17 @@ def run(data_filename, test_run, cam, output_path, model_path, model_type="dpt_b
                     if not side:
                         # utils.write_depth(filename, prediction, grayscale, bits=2)
                         new_pic = utils.write_depth_dict_format(prediction, grayscale, bits=2)
+
+
+                        # "invert" the pictures to be compatible with later processing steps
+                        new_pic = np.max(65535) - new_pic
+                        
+                        # new_pic = np.abs(new_pic-np.full_like(new_pic,65535))
+
+
+
                         data[test_run][model_type][category].append(new_pic)
-            
+
                     else:
                         original_image_bgr = np.flip(original_image_rgb, 2)
                         content = create_side_by_side(original_image_bgr*255, prediction, grayscale)
