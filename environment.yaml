@@ -16,3 +16,6 @@ dependencies:
     - einops==0.6.0
     - cvbridge3==1.1
     - bagpy==0.5
+    - scipy==1.11.1
+    - scikit-image==0.21.0
+    - scikit-learn==1.3.0
