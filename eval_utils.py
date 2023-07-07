@@ -13,6 +13,10 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
+# import matplotlib.cm as cm
+import numpy as np
+from sklearn.cluster import KMeans
+
 
 # # Import Libraries
 # import rosbag
@@ -61,6 +65,15 @@ def load_pickle(data_filename):
 
 
 
+def save_data(data_filename, data):
+    # save data to pickle file
+    with open(data_filename, "wb") as file:
+        pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
+        file.close()
+    print('\'data\' saved.')
+
+
+
 def get_image_data(bag_file_name,topic_cam1,topic_cam2):    
     bag = rosbag.Bag(os.path.join('drone_data', bag_file_name))
 
@@ -88,20 +101,30 @@ def get_depth_data(bag_file_name,topic_depth):
 
 
 
+def post_process_depth_data(depth_measurement_images):
+    # replaces 0 with 65535
+    for idx, image in enumerate(depth_measurement_images):
+        depth_measurement_images[idx] = np.where(image == 0, 65535, image)
+
+    return depth_measurement_images
+
+
+
 def update_data(topic, data_filename, test_run, model_type, newData):
     data = load_pickle(data_filename)
 
     if test_run in data:
-        print('\'Data\' already contains data for \'' +  test_run + '\'.')
+        print('\'Data\' already contained data for \'' +  test_run + '\'.')
         if model_type in data[test_run]:
-            print('\'Data\' also already contains data for \'' + model_type + '\'.')
+            print('\'Data\' also already contained data for \'' + model_type + '\'.')
             if topic in data[test_run][model_type]:
-                if len(data[test_run][model_type][topic]) != len(newData):
-                    data[test_run][model_type][topic] = newData
-                    print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
-            else:
+                # if len(data[test_run][model_type][topic]) != len(newData):
                 data[test_run][model_type][topic] = newData
                 print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+            # else:
+            #     data[test_run][model_type][topic] = newData
+            #     print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+
             # if cam2 in data[test_run][model_type]:
             #     if len(data[test_run][model_type][cam2]) != len(image_data_infra2_np):
             #         data[test_run][model_type][cam2] = image_data_infra2_np
@@ -173,11 +196,13 @@ def create_parallel_plots(frame1, frame2, cam1, cam2, data_filename, test_run, m
     fig, axes = plt.subplots(1, 2, figsize=(10, 10))
     
     # Plot the first subplot
-    axes[0].imshow(data[test_run][model_type][cam1][frame1],cmap='gray')
+    axes[0].imshow(data[test_run][model_type][cam1][frame1])
+    # axes[0].imshow(data[test_run][model_type][cam1][frame1],cmap='gray')
     axes[0].set_title(cam1 + " picture number " + str(frame1))
 
     # Plot the second subplot
-    axes[1].imshow(data[test_run][model_type][cam2][frame2],cmap='gray')
+    axes[1].imshow(data[test_run][model_type][cam2][frame2])
+    # axes[1].imshow(data[test_run][model_type][cam2][frame2],cmap='gray')
     axes[1].set_title(cam2 + " picture number " + str(frame2))
 
     # Adjust the spacing between subplots
@@ -363,3 +388,77 @@ def visualize_errors(frame1_idx, frame2_idx, data, cam1_key, cam2_key, test_run,
     fig.suptitle('Location of the n largest, unique errors', fontsize=16)
     plt.show()
     # plt.colorbar(label="error", orientation="horizontal")
+
+
+
+def plot_extreme_pixels(array):
+    # Create a figure with three subplots
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+
+    # Plot grayscale image with red for smalles Values (left subplot)
+    axs[0].imshow(array, cmap='gray')
+    axs[0].imshow(array == array.min(), cmap='Reds', alpha=0.5)
+
+    # Plot grayscale image with blue for 65535 (middle subplot)
+    axs[1].imshow(array, cmap='gray')
+    axs[1].imshow(array == array.max(), cmap='Blues', alpha=0.5)
+
+    # Plot grayscale image with red for zeros and blue for 65535 (right subplot)
+    axs[2].imshow(array, cmap='gray')
+    axs[2].imshow(array == array.min(), cmap='Reds', alpha=0.5)
+    axs[2].imshow(array == array.max(), cmap='Blues', alpha=0.5)
+
+    # Set titles for the subplots
+    axs[0].set_title('Pixels with value ' + str(array.min()))
+    axs[1].set_title('Pixels with value ' + str(array.max()))
+    axs[2].set_title('Pixels with value ' + str(array.min()) + ' and ' + str(array.max()))
+
+    # Hide tick marks and labels
+    for ax in axs:
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    fig.suptitle('Visualization of Extrema')
+
+    # Adjust spacing between subplots
+    plt.tight_layout()
+
+    # Display the plots
+    plt.show()
+
+
+
+def plot_clustered_maxima(data, num_clusters, circle_scaling_factor):
+    plt.figure(figsize=(10, 8))
+    plt.imshow(data, cmap='gray')
+    plt.title("Clustered Maxima with " + str(num_clusters) + " clusters")
+
+    # Rescaling the data to [0, 1]
+    data = data.astype(float) / 65535.0
+
+    # Reshaping the data for clustering
+    flattened_data = data.reshape(-1, 1)
+
+    # Clustering the data
+    kmeans = KMeans(n_clusters=num_clusters, n_init=10)  # Set n_init explicitly
+    kmeans.fit(flattened_data)
+    cluster_labels = kmeans.predict(flattened_data)
+
+    # Getting the maximum values within each cluster
+    max_values = []
+    for cluster in range(num_clusters):
+        cluster_indices = np.where(cluster_labels == cluster)[0]
+        cluster_max_index = np.argmax(flattened_data[cluster_indices])
+        max_values.append(cluster_indices[cluster_max_index])
+
+    # Plotting circles around maxima
+    for index in max_values:
+        row = index // data.shape[1]
+        col = index % data.shape[1]
+        cluster = cluster_labels[index]
+        cluster_indices = np.where(cluster_labels == cluster)[0]
+        max_radius = np.max(np.linalg.norm(flattened_data[cluster_indices] - flattened_data[index]))
+        circle = plt.Circle((col, row), max_radius*circle_scaling_factor, color='red', fill=False)
+        plt.gca().add_patch(circle)
+
+    plt.show()
