@@ -18,6 +18,9 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 
+from collections import defaultdict
+
+
 # # Import Libraries
 # import rosbag
 # from sensor_msgs.msg import Image
@@ -110,48 +113,57 @@ def post_process_depth_data(depth_measurement_images):
 
 
 
-def update_data(topic, data_filename, test_run, model_type, newData):
-    data = load_pickle(data_filename)
+def update_data(key, data_filename, test_run, model_type, newData): # first input 'key' was called 'topic' before
 
-    if test_run in data:
-        print('\'Data\' already contained data for \'' +  test_run + '\'.')
-        if model_type in data[test_run]:
-            print('\'Data\' also already contained data for \'' + model_type + '\'.')
-            if topic in data[test_run][model_type]:
-                # if len(data[test_run][model_type][topic]) != len(newData):
-                data[test_run][model_type][topic] = newData
-                print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
-            # else:
-            #     data[test_run][model_type][topic] = newData
-            #     print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+    data = defaultdict(list, load_pickle(data_filename))
 
-            # if cam2 in data[test_run][model_type]:
-            #     if len(data[test_run][model_type][cam2]) != len(image_data_infra2_np):
-            #         data[test_run][model_type][cam2] = image_data_infra2_np
-            #         print('Added \''+cam2+'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
-            # else:
-            #     data[test_run][model_type][cam2] = image_data_infra1_np
-            #     print('Added \''+cam2+'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
-        else: 
-            print('\'Data\' does not contain data for ' + model_type + ' and will be added now.')
-            data[test_run][model_type] = {}
-            data[test_run][model_type][topic] = newData
-            # data[test_run][model_type][cam2] = image_data_infra2_np
-            print('Added \'' + topic +'\' to ' + model_type + '\' in \'' + test_run + '\'.')
-    else: 
-        print('\'data\' does not contain data for ' +  test_run + ' and will be added now.')
-        data[test_run] = {}
-        data[test_run][model_type] = {}
-        data[test_run][model_type][topic] = newData
-        # data[test_run][model_type][cam2] = image_data_infra2_np
-        print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+    data[test_run][model_type][key] = newData
+    data = dict(data)
 
-    # save data to pickle file
     with open(data_filename, "wb") as file:
         pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
         file.close()
     print('\'data\' saved.')
-    # print('\n')
+
+    # if test_run in data:
+    #     print('\'Data\' already contained data for \'' +  test_run + '\'.')
+    #     if model_type in data[test_run]:
+    #         print('\'Data\' also already contained data for \'' + model_type + '\'.')
+    #         if topic in data[test_run][model_type]:
+    #             # if len(data[test_run][model_type][topic]) != len(newData):
+    #             data[test_run][model_type][topic] = newData
+    #             print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+    #         # else:
+    #         #     data[test_run][model_type][topic] = newData
+    #         #     print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+
+    #         # if cam2 in data[test_run][model_type]:
+    #         #     if len(data[test_run][model_type][cam2]) != len(image_data_infra2_np):
+    #         #         data[test_run][model_type][cam2] = image_data_infra2_np
+    #         #         print('Added \''+cam2+'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+    #         # else:
+    #         #     data[test_run][model_type][cam2] = image_data_infra1_np
+    #         #     print('Added \''+cam2+'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+    #     else: 
+    #         print('\'Data\' does not contain data for ' + model_type + ' and will be added now.')
+    #         data[test_run][model_type] = {}
+    #         data[test_run][model_type][topic] = newData
+    #         # data[test_run][model_type][cam2] = image_data_infra2_np
+    #         print('Added \'' + topic +'\' to ' + model_type + '\' in \'' + test_run + '\'.')
+    # else: 
+    #     print('\'data\' does not contain data for ' +  test_run + ' and will be added now.')
+    #     data[test_run] = {}
+    #     data[test_run][model_type] = {}
+    #     data[test_run][model_type][topic] = newData
+    #     # data[test_run][model_type][cam2] = image_data_infra2_np
+    #     print('Added \'' + topic +'\' to \'' + model_type + '\' in \'' + test_run + '\'.')
+
+    # # save data to pickle file
+    # with open(data_filename, "wb") as file:
+    #     pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
+    #     file.close()
+    # print('\'data\' saved.')
+    # # print('\n')
 
     # data[test_run][model_type]['depth'] = []
     # data[test_run][model_type]['depth_estimate1'] = []
@@ -461,4 +473,39 @@ def plot_clustered_maxima(data, num_clusters, circle_scaling_factor):
         circle = plt.Circle((col, row), max_radius*circle_scaling_factor, color='red', fill=False)
         plt.gca().add_patch(circle)
 
+    plt.show()
+
+
+
+def plot_error_histogram(text, difference_picture, num_bins):
+    fig = plt.figure(figsize =(10, 7))
+
+    plt.hist(difference_picture, bins=num_bins) 
+
+    max_error = difference_picture.max()
+    min_error = difference_picture.min()
+
+    text = text + " (Range: " + str(min_error) + "-" + str(max_error) + ")"
+    plt.title(text)
+    plt.show()
+
+
+
+def get_difference_picture(pic1,pic2,values_to_neglect):
+    '''
+        returns the absolute difference of the pictures
+        neglecting a list values if wanted
+    '''
+    result = np.abs(pic1 - pic2)
+    
+    mask = np.isin(pic1, values_to_neglect) | np.isin(pic2, values_to_neglect)
+    result[mask] = 0
+    
+    return result
+
+
+
+def create_plot(difference_picture):
+    plt.figure() #figsize=(10, 10)
+    plt.imshow(difference_picture)
     plt.show()
